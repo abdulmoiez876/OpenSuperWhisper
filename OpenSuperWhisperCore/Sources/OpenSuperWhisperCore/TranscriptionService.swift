@@ -38,10 +38,11 @@ public class TranscriptionService: ObservableObject {
     
     init(engineBuilder: @escaping (EngineKind) async -> TranscriptionEngine = TranscriptionService.buildEngine) {
         self.engineBuilder = engineBuilder
-        // Engines load lazily on first transcription (see ensureEngineLoaded), so
-        // merely selecting an engine in Settings — or launching the app — never
-        // triggers a model download. The download happens only when you actually
-        // transcribe with that engine.
+        // Engines load lazily on first transcription (see ensureEngineLoaded), except
+        // that preloadWhisperEngine loads the selected Whisper model at launch when
+        // "Free memory when idle" is off and the model is already on disk. Neither
+        // selecting an engine in Settings nor launching the app ever triggers a model
+        // download: that happens only when you actually transcribe with that engine.
     }
 
     public func cancelTranscription() {
@@ -54,6 +55,17 @@ public class TranscriptionService: ObservableObject {
         currentSegment = ""
         progress = 0.0
         isCancelled = false
+    }
+
+    public func preloadWhisperEngine() async {
+        await Self.engineGate.wait()
+        defer { Task { await Self.engineGate.signal() } }
+        let preferences = CoreAccess.preferences
+        guard Self.engineKind(forSelectedEngine: preferences.selectedEngine) == .whisper,
+              !preferences.unloadWhisperModelWhenIdle,
+              let modelPath = preferences.selectedWhisperModelPath ?? preferences.selectedModelPath,
+              FileManager.default.fileExists(atPath: modelPath) else { return }
+        _ = await ensureEngineLoaded()
     }
     
     /// Initialize the engine matching the current preference if it isn't already

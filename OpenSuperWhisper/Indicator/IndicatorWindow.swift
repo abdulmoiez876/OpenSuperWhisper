@@ -33,6 +33,8 @@ class IndicatorViewModel: ObservableObject {
     /// The recording has been pinned hands-free and no longer depends on the trigger key.
     @Published var isLatched = false
     @Published var isConfirmingCancel = false
+    /// Nothing has reached the microphone for a while: likely switched off while still plugged in.
+    @Published var hearsNothing = false
     @Published var recorder: AudioRecorder = .shared
     @Published var isVisible = false
     /// The physical notch of the screen this bubble is showing on, nil when that screen has
@@ -48,6 +50,8 @@ class IndicatorViewModel: ObservableObject {
 
     var delegate: IndicatorViewDelegate?
     private var blinkTimer: Timer?
+    private var soundCheck: Timer?
+    private var noSoundWatch = NoSoundWatch()
     private var hideTimer: Timer?
     private var confirmCancelTimer: Timer?
     private var liveStreamingActive = false
@@ -165,6 +169,7 @@ class IndicatorViewModel: ObservableObject {
         state = .recording
         startBlinking()
         recordingStartedAt = Date()
+        startListeningForSound()
 
         Task.detached { [recorder] in
             recorder.startRecording()
@@ -277,6 +282,7 @@ class IndicatorViewModel: ObservableObject {
     func startDecoding() {
         resetCancelConfirmation()
         stopBlinking()
+        stopListeningForSound()
         isLatched = false
 
         // Grab the live-streaming preview text (if any) BEFORE cancelling the stream, then hand
@@ -379,6 +385,25 @@ class IndicatorViewModel: ObservableObject {
         }
     }
     
+    private func startListeningForSound() {
+        stopListeningForSound()
+        soundCheck = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                guard let self, self.state == .recording,
+                      let peak = self.recorder.peakPowerDBFS() else { return }
+                let quiet = self.noSoundWatch.update(peakDBFS: peak, at: ProcessInfo.processInfo.systemUptime)
+                if quiet != self.hearsNothing { self.hearsNothing = quiet }
+            }
+        }
+    }
+
+    private func stopListeningForSound() {
+        soundCheck?.invalidate()
+        soundCheck = nil
+        noSoundWatch = NoSoundWatch()
+        hearsNothing = false
+    }
+
     private func stopBlinking() {
         blinkTimer?.invalidate()
         blinkTimer = nil
@@ -387,6 +412,7 @@ class IndicatorViewModel: ObservableObject {
 
     func cleanup() {
         stopBlinking()
+        stopListeningForSound()
         resetCancelConfirmation()
         isLatched = false
         recordingStartedAt = nil
@@ -397,6 +423,7 @@ class IndicatorViewModel: ObservableObject {
     }
 
     func cancelRecording() {
+        stopListeningForSound()
         hideTimer?.invalidate()
         hideTimer = nil
         recorder.cancelRecording()
@@ -742,10 +769,19 @@ struct IndicatorWindow: View {
         return confirmed
     }
 
+    private var silenceWarning: AttributedString {
+        var warning = AttributedString("⚠︎ " + String(localized: "No sound detected. Is your microphone on?"))
+        warning.foregroundColor = .orange
+        return warning
+    }
+
     @available(macOS 26.0, *)
     private var glassBubbleContent: some View {
         let hasText = !streaming.confirmedText.isEmpty || !streaming.volatileText.isEmpty
-        let showsCaption = viewModel.state == .recording && hasText
+        // The capsule beside the waveform carries the live text, or, when the microphone hears
+        // nothing at all, a warning in its place: words would mean there is sound.
+        let warnsOfSilence = viewModel.state == .recording && viewModel.hearsNothing && !hasText
+        let showsCaption = viewModel.state == .recording && (hasText || warnsOfSilence)
         // The caption gets its own glass shape beside the pill, or the label's place when the pill
         // has nothing else to show, so a layout without the label still needs that slot while
         // text streams in (the legacy bubble shows the caption regardless).
@@ -756,7 +792,7 @@ struct IndicatorWindow: View {
             showDot: layout.contains(.dot),
             center: center,
             labelText: glassLabel,
-            caption: showsCaption ? liveCaption : nil,
+            caption: showsCaption ? (warnsOfSilence ? silenceWarning : liveCaption) : nil,
             bands: spectrum.bands,
             blinking: viewModel.isBlinking,
             waveformHeight: meterHeight,

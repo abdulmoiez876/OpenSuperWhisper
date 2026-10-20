@@ -37,6 +37,19 @@ final class TranscriptionRetryTests: XCTestCase {
         XCTAssertEqual(engine.attempts, 2)
     }
 
+    func testTheRetryIsAnnouncedOnceAndOnlyWhenItHappens() async throws {
+        var announced = 0
+        _ = try await DictationPipeline.retryingOnce(onRetry: { announced += 1 }) {
+            try await Engine(failures: 0).transcribe()
+        }
+        XCTAssertEqual(announced, 0)
+        let failingOnce = Engine(failures: 1)
+        _ = try await DictationPipeline.retryingOnce(onRetry: { announced += 1 }) {
+            try await failingOnce.transcribe()
+        }
+        XCTAssertEqual(announced, 1)
+    }
+
     func testASuccessRunsOnce() async throws {
         let engine = Engine(failures: 0)
         _ = try await DictationPipeline.retryingOnce { try await engine.transcribe() }

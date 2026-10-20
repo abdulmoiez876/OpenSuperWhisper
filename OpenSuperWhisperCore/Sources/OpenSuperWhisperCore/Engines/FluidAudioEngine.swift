@@ -82,25 +82,23 @@ class FluidAudioEngine: TranscriptionEngine {
             progressTask = nil
         }
 
-        // Two file paths:
-        //  • Nothing to boost       → the offline AsrManager (full accuracy, the default).
-        //  • Terms to boost         → a sliding-window pass with vocabulary boosting, the only
-        //    place FluidAudio 0.15.4 exposes decoder boosting. We feed the WAV through it
-        //    rather than the mic (see `transcribeFileWithBoosting`).
+        // Always the offline AsrManager, the more accurate decoder for a whole file. Terms to
+        // boost are applied afterwards by rescoring its result against the audio, as
+        // FluidAudio's own batch transcription does (#235). They used to send the file through
+        // the sliding-window decoder instead, which reloaded every model on each dictation.
         let boostTerms = activeBoostTerms(settings)
-        let convertedSamples = try await Self.convertedSamplesIfNeeded(url: url)
-        let rawText: String
-        if boostTerms.isEmpty {
-            // A fresh TDT decoder state per file keeps transcriptions independent.
-            var decoderState = TdtDecoderState.make(decoderLayers: await asrManager.decoderLayerCount)
-            if let convertedSamples {
-                rawText = try await asrManager.transcribe(convertedSamples, decoderState: &decoderState).text
-            } else {
-                rawText = try await asrManager.transcribe(url, decoderState: &decoderState).text
-            }
+        let samples = try await Self.samplesIfNeeded(url: url, forBoosting: !boostTerms.isEmpty)
+        // A fresh TDT decoder state per file keeps transcriptions independent.
+        var decoderState = TdtDecoderState.make(decoderLayers: await asrManager.decoderLayerCount)
+        let result = if let samples {
+            try await asrManager.transcribe(samples, decoderState: &decoderState)
         } else {
-            rawText = try await transcribeFileWithBoosting(
-                url: url, convertedSamples: convertedSamples, boostTerms: boostTerms)
+            try await asrManager.transcribe(url, decoderState: &decoderState)
+        }
+        var rawText = result.text
+        if !boostTerms.isEmpty, let samples, let timings = result.tokenTimings,
+           let rescored = await rescore(rawText, timings: timings, samples: samples, terms: boostTerms) {
+            rawText = rescored
         }
 
         guard !isCancelled else {
@@ -141,55 +139,40 @@ class FluidAudioEngine: TranscriptionEngine {
                                snippets: settings.snippetTriggers)
     }
 
-    /// Transcribes a whole file through a `SlidingWindowAsrManager` configured with vocabulary
-    /// boosting — the only API surface in FluidAudio 0.15.4 that biases the Parakeet decoder
-    /// toward custom terms. The 11+2+2 `.default` window matches the offline chunking, so output
-    /// quality tracks the offline path; boosting only nudges misrecognized terms.
-    ///
-    /// The audio comes entirely from `streamAudio(_:)` (the WAV read into one buffer, then sliced),
-    /// never a microphone — `startStreaming(source:)` only records the source as metadata and opens
-    /// no input device. `finish()` returns the merged transcript.
-    private func transcribeFileWithBoosting(url: URL, convertedSamples: [Float]?,
-                                            boostTerms: [String]) async throws -> String {
-        let versionString = CoreAccess.preferences.fluidAudioModelVersion
-        let version = AsrModelVersion(preference: versionString)
-        let models = try await AsrModels.downloadAndLoad(version: version)
+    /// The rescorer's settings for dictation. FluidAudio's tests on short terms: the taper took
+    /// false replacements of common words by unspoken short terms from 12 to 0, and turning the
+    /// spotter rescue off cut false positives by about 80% while raising recall (#235).
+    static let rescorerConfig = VocabularyRescorer.Config(shortTermCbwTaperPivot: 5, spotterRescueEnabled: false)
 
-        let manager = SlidingWindowAsrManager(config: .default)
-        try await configureVocabulary(on: manager, boostTerms: boostTerms)
-        try await manager.loadModels(models)
-        try await manager.startStreaming(source: .system)
+    /// The boosting session for the last term list: its CTC models load and its terms are
+    /// tokenised once, then it serves every dictation until the dictionary or the snippets change.
+    private var boosting: (terms: [String], session: VocabularyBoostingSession)?
 
-        guard let buffer = try convertedSamples.map(Self.monoBuffer) ?? Self.readWholeFile(url) else {
-            await manager.cancel()
-            return ""
+    /// The transcript rescored toward the boost terms, or nil to keep it. Never throws: boosting
+    /// failing is logged and the plain transcript is used.
+    private func rescore(_ text: String, timings: [TokenTiming], samples: [Float], terms: [String]) async -> String? {
+        do {
+            let session = try await boostingSession(for: terms)
+            return await session.rescore(text: text, tokenTimings: timings, audioSamples: samples)?.text
+        } catch {
+            print("Parakeet vocabulary boosting unavailable, keeping the plain transcript: \(error)")
+            return nil
         }
-        let format = buffer.format
+    }
 
-        // Feed in window-sized chunks (the manager re-buffers internally for its sliding window).
-        let samplesPerChunk = Int(SlidingWindowAsrConfig.default.chunkSeconds * format.sampleRate)
-        var position = 0
-        let totalFrames = Int(buffer.frameLength)
-        while position < totalFrames {
-            if isCancelled {
-                await manager.cancel()
-                throw CancellationError()
-            }
-            let chunkSize = min(samplesPerChunk, totalFrames - position)
-            guard let chunk = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(chunkSize))
-            else { break }
-            for channel in 0..<Int(format.channelCount) {
-                if let src = buffer.floatChannelData?[channel], let dst = chunk.floatChannelData?[channel] {
-                    for i in 0..<chunkSize { dst[i] = src[position + i] }
-                }
-            }
-            chunk.frameLength = AVAudioFrameCount(chunkSize)
-            await manager.streamAudio(chunk)
-            position += chunkSize
-            await Task.yield()
-        }
-
-        return try await manager.finish()
+    private func boostingSession(for terms: [String]) async throws -> VocabularyBoostingSession {
+        let terms = terms.filter { !$0.isEmpty }
+        if let boosting, boosting.terms == terms { return boosting.session }
+        let vocabularyURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("OpenSuperWhisper-ParakeetVocabulary-\(UUID().uuidString)")
+            .appendingPathExtension("txt")
+        try terms.joined(separator: "\n").write(to: vocabularyURL, atomically: true, encoding: .utf8)
+        defer { try? FileManager.default.removeItem(at: vocabularyURL) }
+        let loaded = try await CustomVocabularyContext.loadWithCtcTokens(from: vocabularyURL.path)
+        let session = try await VocabularyBoostingSession(vocabulary: loaded.vocab, ctcModels: loaded.models,
+                                                          config: Self.rescorerConfig)
+        boosting = (terms, session)
+        return session
     }
 
     /// Samples to hand FluidAudio in place of the file, or nil to let it read the file itself.
@@ -198,56 +181,15 @@ class FluidAudioEngine: TranscriptionEngine {
     /// channels into silence, so a multi-channel file goes through the active-channel mix
     /// instead. A mono file goes through it too when it is quiet enough to be lifted
     /// (`QuietClipGain`); any other keeps FluidAudio's reader, which streams long files from disk.
-    private static func convertedSamplesIfNeeded(url: URL) async throws -> [Float]? {
+    ///
+    /// Boosting always needs the samples: the rescorer reads the audio behind the transcript.
+    private static func samplesIfNeeded(url: URL, forBoosting: Bool) async throws -> [Float]? {
         let isMultiChannel = try AVAudioFile(forReading: url).processingFormat.channelCount > 1
-        guard try isMultiChannel || AudioPCMConverter.staysBelowNormalLevel(url) else { return nil }
+        guard try forBoosting || isMultiChannel || AudioPCMConverter.staysBelowNormalLevel(url) else { return nil }
         guard let samples = try await AudioPCMConverter.convertAudioToPCM(fileURL: url) else {
             throw TranscriptionError.audioConversionFailed
         }
         return samples
-    }
-
-    private static func monoBuffer(_ samples: [Float]) -> AVAudioPCMBuffer? {
-        guard !samples.isEmpty,
-              let format = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: 16000,
-                                         channels: 1, interleaved: false),
-              let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(samples.count))
-        else { return nil }
-        samples.withUnsafeBufferPointer { buffer.floatChannelData![0].update(from: $0.baseAddress!, count: samples.count) }
-        buffer.frameLength = AVAudioFrameCount(samples.count)
-        return buffer
-    }
-
-    private static func readWholeFile(_ url: URL) throws -> AVAudioPCMBuffer? {
-        let audioFile = try AVAudioFile(forReading: url)
-        let frameCount = AVAudioFrameCount(audioFile.length)
-        guard frameCount > 0,
-              let buffer = AVAudioPCMBuffer(pcmFormat: audioFile.processingFormat, frameCapacity: frameCount)
-        else { return nil }
-        try audioFile.read(into: buffer)
-        return buffer
-    }
-
-    /// Configures vocabulary boosting on a `SlidingWindowAsrManager` from the dictionary terms,
-    /// using the same temp-file + CTC-token approach the engine has always used. Throws on failure
-    /// so the caller surfaces it rather than silently transcribing without the requested boost.
-    private func configureVocabulary(on manager: SlidingWindowAsrManager, boostTerms: [String]) async throws {
-        let terms = boostTerms.filter { !$0.isEmpty }
-        guard !terms.isEmpty else { return }
-
-        let vocabularyURL = FileManager.default.temporaryDirectory
-            .appendingPathComponent("OpenSuperWhisper-ParakeetVocabulary-\(UUID().uuidString)")
-            .appendingPathExtension("txt")
-        try terms.joined(separator: "\n").write(to: vocabularyURL, atomically: true, encoding: .utf8)
-        defer { try? FileManager.default.removeItem(at: vocabularyURL) }
-
-        let vocabulary = try await CustomVocabularyContext.loadWithCtcTokens(from: vocabularyURL.path)
-        guard !vocabulary.vocab.terms.isEmpty else { return }
-
-        try await manager.configureVocabularyBoosting(
-            vocabulary: vocabulary.vocab,
-            ctcModels: vocabulary.models
-        )
     }
 }
 

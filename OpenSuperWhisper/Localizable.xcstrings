@@ -56018,6 +56018,52 @@
           }
         }
       }
+    },
+    "No sound detected. Is your microphone on?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kein Ton erkannt. Ist dein Mikrofon an?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se detecta sonido. ¿Está encendido el micrófono?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun son détecté. Votre micro est-il allumé ?"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun suono rilevato. Il microfono è acceso?"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nenhum som detectado. Seu microfone está ligado?"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Không phát hiện âm thanh. Micrô của bạn đã bật chưa?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未检测到声音。麦克风打开了吗？"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

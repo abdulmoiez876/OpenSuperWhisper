@@ -311,7 +311,8 @@ class AudioRecorder: NSObject, ObservableObject {
             try Diag.measure("AVAudioRecorder init+record") {
                 audioRecorder = try AVAudioRecorder(url: fileURL, settings: settings)
                 audioRecorder?.delegate = self
-                audioRecorder?.isMeteringEnabled = monitorConnection
+                // Always on: the bubble reads it to notice a microphone that hears nothing.
+                audioRecorder?.isMeteringEnabled = true
                 audioRecorder?.record()
             }
             Task { @MainActor in SpectrumAnalyzer.shared.start() }
@@ -331,6 +332,15 @@ class AudioRecorder: NSObject, ObservableObject {
         }
     }
     
+    /// The loudest sample since the last reading, in dBFS, across the recorded channels; nil
+    /// while nothing records.
+    func peakPowerDBFS() -> Float? {
+        guard let recorder = audioRecorder, recorder.isRecording else { return nil }
+        recorder.updateMeters()
+        let channels = Int(recorder.format.channelCount)
+        return (0..<max(channels, 1)).map { recorder.peakPower(forChannel: $0) }.max()
+    }
+
     /// What a stop produced. A clip and an accidental tap used to be the same `nil`, so a
     /// recording that captured nothing ended as quietly as one the user never meant to make,
     /// and the only signal was noticing afterwards that the words were missing (#117).

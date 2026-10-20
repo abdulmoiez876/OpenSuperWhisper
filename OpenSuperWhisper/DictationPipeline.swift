@@ -184,7 +184,9 @@ final class DictationPipeline: ObservableObject {
         do {
             let rawText: String
             if let clip = item.tempURL {
-                rawText = try await Self.retryingOnce(stop: { self.discarding }) {
+                rawText = try await Self.retryingOnce(stop: { self.discarding }, onRetry: {
+                    IndicatorWindowManager.shared.flash(.info(String(localized: "Transcription failed, trying once more…")))
+                }) {
                     if let transcribeOverride {
                         return try await transcribeOverride(clip, settings)
                     }
@@ -399,7 +401,9 @@ final class DictationPipeline: ObservableObject {
     /// user a trip to the history to press ↻, then a copy and a paste by hand: someone reported
     /// one in three to five like that. The second error is the one reported. Nothing is retried
     /// once the dictation was thrown away, nor after a cancellation.
-    static func retryingOnce(stop: () -> Bool = { false },
+    /// `onRetry` runs before the second try, so the bubble can say it is happening rather than
+    /// sit on "transcribing" for twice as long.
+    static func retryingOnce(stop: () -> Bool = { false }, onRetry: () -> Void = {},
                              _ attempt: () async throws -> String) async throws -> String {
         do {
             return try await attempt()
@@ -408,6 +412,7 @@ final class DictationPipeline: ObservableObject {
         } catch {
             guard !stop() else { throw error }
             Diag.mark("transcription failed (\(error.localizedDescription)), trying once more")
+            onRetry()
             return try await attempt()
         }
     }

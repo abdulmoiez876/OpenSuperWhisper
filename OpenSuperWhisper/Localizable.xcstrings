@@ -55972,6 +55972,52 @@
           }
         }
       }
+    },
+    "Transcription failed, trying once more…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transkription fehlgeschlagen, neuer Versuch …"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La transcripción falló, se intenta de nuevo…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Échec de la transcription, nouvel essai…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trascrizione non riuscita, nuovo tentativo…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A transcrição falhou, tentando de novo…"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chép lời thất bại, đang thử lại…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "转写失败，正在重试…"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

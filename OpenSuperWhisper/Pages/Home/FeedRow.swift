@@ -303,11 +303,14 @@ private struct FeedRowActions: View {
                     Image(systemName: "arrow.clockwise")
                         .modifier(ActionChrome())
                 }
+                // A click reruns with the model in use, which is what a failed row needs nine times
+                // out of ten; holding the button opens the other models and the styles.
+                primaryAction: { onRegenerate(nil) }
                 .menuStyle(.button)
                 .menuIndicator(.hidden)
                 .buttonStyle(.plain)
                 .fixedSize()
-                .help("Regenerate with a model, or rewrite in another style")
+                .help("Click to regenerate with the current model. Hold for another model or a style.")
                 .visible(isHovered)
             }
             if canReport {

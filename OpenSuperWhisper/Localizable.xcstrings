@@ -55835,48 +55835,140 @@
         }
       }
     },
-    "Regenerate with a model, or rewrite in another style": {
+    "Click to regenerate with the current model. Hold for another model or a style.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mit einem Modell neu erzeugen oder in einem anderen Stil neu schreiben"
+            "value": "Klicken, um mit dem aktuellen Modell neu zu erzeugen. Halten für ein anderes Modell oder einen Stil."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Regenerar con un modelo o reescribir en otro estilo"
+            "value": "Haz clic para regenerar con el modelo actual. Mantén pulsado para otro modelo o un estilo."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Régénérer avec un modèle, ou réécrire dans un autre style"
+            "value": "Cliquez pour régénérer avec le modèle actuel. Maintenez pour un autre modèle ou un style."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Rigenera con un modello o riscrivi in un altro stile"
+            "value": "Fai clic per rigenerare con il modello attuale. Tieni premuto per un altro modello o uno stile."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Gerar de novo com um modelo ou reescrever em outro estilo"
+            "value": "Clique para gerar de novo com o modelo atual. Mantenha pressionado para outro modelo ou um estilo."
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tạo lại bằng một mô hình, hoặc viết lại theo phong cách khác"
+            "value": "Nhấp để tạo lại bằng mô hình hiện tại. Nhấn giữ để chọn mô hình khác hoặc một phong cách."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "用某个模型重新生成，或按其他样式重写"
+            "value": "点击用当前模型重新生成。按住可选择其他模型或样式。"
+          }
+        }
+      }
+    },
+    "Transcription failed: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transkription fehlgeschlagen: %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La transcripción falló: %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Échec de la transcription : %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trascrizione non riuscita: %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A transcrição falhou: %@"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chép lời thất bại: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "转写失败：%@"
+          }
+        }
+      }
+    },
+    "Transcription failed: %@. Click ↻ to try again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transkription fehlgeschlagen: %@. Auf ↻ klicken, um es erneut zu versuchen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La transcripción falló: %@. Haz clic en ↻ para volver a intentarlo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Échec de la transcription : %@. Cliquez sur ↻ pour réessayer."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trascrizione non riuscita: %@. Fai clic su ↻ per riprovare."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A transcrição falhou: %@. Clique em ↻ para tentar de novo."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chép lời thất bại: %@. Nhấp ↻ để thử lại."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "转写失败：%@。点击 ↻ 重试。"
           }
         }
       }

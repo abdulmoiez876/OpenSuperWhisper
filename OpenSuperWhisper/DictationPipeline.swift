@@ -362,6 +362,10 @@ final class DictationPipeline: ObservableObject {
             }
         } catch {
             print("Dictation transcription failed: \(error)")
+            // Said where the user looks, with the engine's own words: "Transcription failed" on
+            // its own left a user with nine failures in ten and nothing to report but that.
+            let reason = Self.failureReason(error)
+            Diag.mark("dictation failed: \(reason)")
             // Don't lose the audio on failure. When history is on, keep the recording with a .failed
             // status + retry message so it shows in the log and can be re-run with the regenerate (↻)
             // button. Otherwise discard. Either way, surface the failure — silent loss is worse.
@@ -370,14 +374,24 @@ final class DictationPipeline: ObservableObject {
                let saved = persistFailedRecording(timestamp: item.startedAt, tempURL: clip) {
                 await storeRecording(
                     id: saved.id, timestamp: saved.timestamp, fileName: saved.fileName,
-                    finalURL: saved.url, transcription: "Transcription failed — click ↻ to try again.",
+                    finalURL: saved.url,
+                    transcription: String(localized: "Transcription failed: \(reason). Click ↻ to try again."),
                     rawTranscription: nil, status: .failed, progress: 0, context: item.context,
                     modelUsed: nil, wasFallback: false)
             } else {
                 discardAudio(item.tempURL)
             }
-            IndicatorWindowManager.shared.flash(.error("Transcription failed"))
+            IndicatorWindowManager.shared.flash(.error(String(localized: "Transcription failed: \(reason)")))
         }
+    }
+
+    /// An engine error in one line short enough for the bubble.
+    static func failureReason(_ error: Error) -> String {
+        let text = error.localizedDescription
+            .replacingOccurrences(of: "\n", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .trimmingCharacters(in: CharacterSet(charactersIn: "."))
+        return text.count > 120 ? String(text.prefix(119)) + "…" : text
     }
 
     /// Runs a transcription, and once more if it throws. Engine failures are mostly passing ones

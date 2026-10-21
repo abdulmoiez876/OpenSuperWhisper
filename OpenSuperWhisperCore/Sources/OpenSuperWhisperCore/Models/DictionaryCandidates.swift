@@ -58,6 +58,7 @@ public enum DictionaryCandidates {
             guard let term = term(from: replacement.written, spelling: spelling,
                                   capitalMarksNames: capitalMarksNames),
                   !term.split(separator: " ").allSatisfy({ dictatedWords.contains(String($0)) }),
+                  resembles(term, heard: replacement.heard),
                   seen.insert(term.lowercased()).inserted else { continue }
             result.append(Candidate(term: term, heard: replacement.heard.joined(separator: " ")))
             if result.count == maxPerDictation { break }
@@ -113,6 +114,45 @@ public enum DictionaryCandidates {
         // Lowercase: only a word no dictionary has, and not one it would fix as a typo of
         // another (the user's own slip while correcting).
         return !known && !spelling.correctsTypo(word)
+    }
+
+    // MARK: - Resemblance
+
+    /// A misheard word, fixed, keeps much of what the engine wrote: "Superbase" for "supabase",
+    /// "cloud code" for "Claude Code", "et lui" for "Eliott". Under this share of letters in
+    /// common, the user wrote something else in its place. A chat app can also show its
+    /// placeholder once a message is sent, which the watch read as the dictation rewritten:
+    /// "Si samedi soir" became "Message Mikaël" (0.38) in Beeper.
+    static let minResemblance = 0.4
+
+    /// Whether `term` shares at least `minResemblance` of its letters, in order, with what was
+    /// heard. A term with digits or symbols is spoken in other letters ("C++", "k8s", "GPT4")
+    /// and always passes, as does a word only added.
+    static func resembles(_ term: String, heard: [String]) -> Bool {
+        guard !heard.isEmpty, term.allSatisfy({ $0.isLetter || $0 == " " || $0 == "'" || $0 == "’" }) else {
+            return true
+        }
+        let said = letters(of: heard.joined()), written = letters(of: term)
+        guard !said.isEmpty else { return true }
+        let shared = commonLetterCount(said, written)
+        return Double(shared) / Double(max(said.count, written.count)) >= minResemblance
+    }
+
+    private static func letters(of text: String) -> [Character] {
+        Array(text.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: nil).filter(\.isLetter))
+    }
+
+    /// Length of the longest run of letters both share in the same order.
+    private static func commonLetterCount(_ a: [Character], _ b: [Character]) -> Int {
+        var previous = [Int](repeating: 0, count: b.count + 1)
+        for letter in a {
+            var row = [0]
+            for (j, other) in b.enumerated() {
+                row.append(letter == other ? previous[j] + 1 : max(previous[j + 1], row[j]))
+            }
+            previous = row
+        }
+        return previous[b.count]
     }
 
     // MARK: - Shapes

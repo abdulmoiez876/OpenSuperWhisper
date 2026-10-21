@@ -170,6 +170,24 @@ final class DictionaryCandidatesTests: CoreTestCase {
         XCTAssertEqual(candidates("send", "Rsets", dictated: "Rsets send"), [])
     }
 
+    func testTextWrittenInPlaceOfTheDictationIsNotACorrection() {
+        // Beeper's empty composer, read once the message was sent.
+        XCTAssertEqual(candidates("Si samedi soir", "Message Mikaël"), [])
+        XCTAssertEqual(candidates("Parce que", "Message Merryl"), [])
+        XCTAssertEqual(candidates("merci beaucoup", "Mikaël"), [])
+    }
+
+    func testMisheardNamesStillResembleWhatWasHeard() {
+        XCTAssertEqual(candidates("et lui", "Eliott"), ["Eliott"])
+        XCTAssertEqual(candidates("superbèze", "Supabase"), ["Supabase"])
+        XCTAssertEqual(candidates("hugues gardener", "YouGardener"), ["YouGardener"])
+        XCTAssertEqual(candidates("cube control", "kubectl"), ["kubectl"])
+    }
+
+    func testTermsSpokenInOtherLettersAreNotHeldToResemblance() {
+        XCTAssertEqual(candidates("kubernetes", "k8s"), ["k8s"])
+    }
+
     func testAReworkedTextOffersNothing() {
         let replacements = (0...DictionaryCandidates.maxReplacements).map {
             CorrectionDiff.Replacement(heard: ["x\($0)"], written: [Word("Rsets\($0)", startsSentence: false)])
@@ -181,7 +199,7 @@ final class DictionaryCandidatesTests: CoreTestCase {
 
     func testDuplicatesAndTheCap() {
         let replacements = ["Rsets", "Rsets", "GitHub", "kubectl", "OSW"].map {
-            CorrectionDiff.Replacement(heard: ["x"], written: [Word($0, startsSentence: false)])
+            CorrectionDiff.Replacement(heard: [$0.lowercased()], written: [Word($0, startsSentence: false)])
         }
         XCTAssertEqual(DictionaryCandidates.candidates(in: replacements, dictated: "x", spelling: spelling)
                         .map(\.term), ["Rsets", "GitHub", "kubectl"])

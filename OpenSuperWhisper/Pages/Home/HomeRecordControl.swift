@@ -39,13 +39,13 @@ struct HomeRecordControl: View {
                   ?? String(localized: "Set a shortcut in Settings"))
             recordButton
                 .zIndex(1)
-            ControlSegment(edge: .trailing, action: importAudioFiles) {
+            ControlSegment(edge: .trailing, action: importFiles) {
                 Image(systemName: "square.and.arrow.down")
                     .scaledFont(size: 18, weight: .medium)
                     .foregroundColor(STheme.accent)
                 Text("Import")
             }
-            .help("Transcribe audio files")
+            .help("Transcribe audio or video files")
         }
     }
 
@@ -101,9 +101,9 @@ struct HomeRecordControl: View {
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: viewModel.state)
     }
 
-    private func importAudioFiles() {
+    private func importFiles() {
         let panel = NSOpenPanel()
-        panel.allowedContentTypes = [.audio]
+        panel.allowedContentTypes = FileDropHandler.acceptedTypes
         panel.allowsMultipleSelection = true
         panel.canChooseDirectories = false
         panel.prompt = String(localized: "Transcribe")

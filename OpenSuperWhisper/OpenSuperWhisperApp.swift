@@ -236,10 +236,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, ObservableOb
     }
 
     private func isAudioFile(_ url: URL) -> Bool {
-        if let contentType = try? url.resourceValues(forKeys: [.contentTypeKey]).contentType {
-            return contentType.conforms(to: .audio)
-        }
-        return UTType(filenameExtension: url.pathExtension)?.conforms(to: .audio) ?? false
+        let contentType = (try? url.resourceValues(forKeys: [.contentTypeKey]).contentType)
+            ?? UTType(filenameExtension: url.pathExtension)
+        return FileDropHandler.acceptedTypes.contains { contentType?.conforms(to: $0) ?? false }
     }
     
     private func observeMicrophoneChanges() {

@@ -127,8 +127,9 @@ public class TranscriptionQueue: ObservableObject {
             }.value) ?? 0.0
 
             let timestamp = Date()
-            let fileName = "\(Int(timestamp.timeIntervalSince1970)).wav"
             let id = UUID()
+            // Files dropped together share a second; the id keeps their recordings apart.
+            let fileName = "\(Int(timestamp.timeIntervalSince1970))-\(id.uuidString.prefix(8)).wav"
 
             let recording = Recording(
                 id: id,
@@ -204,6 +205,20 @@ public class TranscriptionQueue: ObservableObject {
         }
     }
 
+    /// A video's sound is written straight into the recording's file; audio is read in place.
+    private func audioToTranscribe(_ source: URL, for recording: Recording) async throws -> URL {
+        guard VideoSoundtrack.isVideo(source) else { return source }
+        let destination = recording.url
+        try await Task.detached(priority: .userInitiated) {
+            try FileManager.default.createDirectory(
+                at: destination.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+            try await VideoSoundtrack.extract(from: source, to: destination)
+        }.value
+        return destination
+    }
+
     private func processRecording(_ recording: Recording) async {
         if isRecordingCancelled(recording.id) {
             clearCancellation(recording.id)
@@ -275,8 +290,9 @@ public class TranscriptionQueue: ObservableObject {
                     return
                 }
 
+                let audioURL = try await audioToTranscribe(sourceURL, for: recording)
                 let settings = makeSettings()
-                let text = try await transcriptionService.transcribeAudio(url: sourceURL, settings: settings, modelOverride: overrideOption)
+                let text = try await transcriptionService.transcribeAudio(url: audioURL, settings: settings, modelOverride: overrideOption)
 
                 if isRecordingCancelled(recording.id) || Task.isCancelled {
                     return
@@ -289,11 +305,11 @@ public class TranscriptionQueue: ObservableObject {
                         withIntermediateDirectories: true
                     )
 
-                    if sourceURL.path != finalURL.path {
+                    if audioURL.path != finalURL.path {
                         if FileManager.default.fileExists(atPath: finalURL.path) {
                             try? FileManager.default.removeItem(at: finalURL)
                         }
-                        try FileManager.default.copyItem(at: sourceURL, to: finalURL)
+                        try FileManager.default.copyItem(at: audioURL, to: finalURL)
                     }
                 }.value
 

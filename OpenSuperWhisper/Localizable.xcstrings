@@ -2485,48 +2485,48 @@
         }
       }
     },
-    "Drop audio files to transcribe": {
+    "Drop audio or video files to transcribe": {
       "localizations": {
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Déposez des fichiers audio à transcrire"
+            "value": "Déposez des fichiers audio ou vidéo à transcrire"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Audiodateien zum Transkribieren ablegen"
+            "value": "Audio- oder Videodateien zum Transkribieren ablegen"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Suelta archivos de audio para transcribir"
+            "value": "Suelta archivos de audio o vídeo para transcribir"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Trascina i file audio da trascrivere"
+            "value": "Trascina i file audio o video da trascrivere"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Solte arquivos de áudio para transcrever"
+            "value": "Solte arquivos de áudio ou vídeo para transcrever"
           }
         },
         "vi": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Thả tệp âm thanh để phiên âm"
+            "value": "Thả tệp âm thanh hoặc video để phiên âm"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "拖放音频文件进行转写"
+            "value": "拖放音频或视频文件进行转写"
           }
         }
       }
@@ -39377,48 +39377,48 @@
         }
       }
     },
-    "Transcribe audio files": {
+    "Transcribe audio or video files": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Audiodateien transkribieren"
+            "value": "Audio- oder Videodateien transkribieren"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Transcribir archivos de audio"
+            "value": "Transcribir archivos de audio o vídeo"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Transcrire des fichiers audio"
+            "value": "Transcrire des fichiers audio ou vidéo"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Trascrivi file audio"
+            "value": "Trascrivi file audio o video"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Transcrever arquivos de áudio"
+            "value": "Transcrever arquivos de áudio ou vídeo"
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Phiên âm tệp âm thanh"
+            "value": "Phiên âm tệp âm thanh hoặc video"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "转写音频文件"
+            "value": "转写音频或视频文件"
           }
         }
       }

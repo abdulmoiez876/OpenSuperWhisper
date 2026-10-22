@@ -56,6 +56,31 @@ final class AppInsertionRuleTests: XCTestCase {
                        terminal)
     }
 
+    // MARK: - Bundled terminal presets (#85)
+
+    /// The terminals seeded to paste on first launch. Pinned as a list because a wrong or missing
+    /// bundle identifier is a rule that silently never applies, which is how #85 reached a user in
+    /// the first place.
+    func testTheBundledTerminalPresetsPasteForTheKnownTerminals() {
+        let presets = AppInsertionRule.bundledTerminalPresets
+
+        XCTAssertEqual(presets.map(\.bundleIdentifier),
+                       ["com.apple.Terminal", "com.googlecode.iterm2", "com.mitchellh.ghostty",
+                        "dev.warp.Warp-Stable", "org.alacritty", "net.kovidgoyal.kitty",
+                        "com.github.wez.wezterm"])
+        XCTAssertTrue(presets.allSatisfy { $0.mode == .paste })
+        XCTAssertTrue(presets.allSatisfy { $0.typingPaceMilliseconds == nil })
+    }
+
+    /// The integrated terminal of an editor is left typing: its editor is the frontmost app, so a
+    /// paste rule would fire on the whole editor, not only its terminal.
+    func testTheBundledPresetsLeaveEditorsOut() {
+        let ids = Set(AppInsertionRule.bundledTerminalPresets.map(\.bundleIdentifier))
+
+        XCTAssertFalse(ids.contains("com.microsoft.VSCode"))
+        XCTAssertFalse(ids.contains("com.todesktop.230313mzl4w4u92")) // Cursor
+    }
+
     // MARK: - Round trip
 
     /// The list lives in UserDefaults as JSON, so a rule has to survive encoding unchanged,

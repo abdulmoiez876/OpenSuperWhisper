@@ -53,6 +53,7 @@ final class DefaultsKeySnapshotTests: XCTestCase {
         "dictionaryRefusedWords",
         "dictionarySuggestionsData",
         "didSeedAppContextPresets",
+        "didSeedTerminalInsertionRules",
         "escCancelWithoutConfirmation",
         "feedbackPromptDone",
         "feedbackPromptLaunches",
@@ -280,6 +281,7 @@ final class DefaultsKeySnapshotTests: XCTestCase {
             prefs.appContextProfiles = [AppContextProfile(bundleIdentifier: "com.example")]
         }
         assertWrites("didSeedAppContextPresets") { prefs.didSeedAppContextPresets = true }
+        assertWrites("didSeedTerminalInsertionRules") { prefs.didSeedTerminalInsertionRules = true }
         assertWrites("autoCopyToClipboard") { prefs.autoCopyToClipboard = false }
         assertWrites("autoPasteTranscription") { prefs.autoPasteTranscription = false }
         assertWrites("clipboardRestoreDelayMs") { prefs.clipboardRestoreDelayMs = 900 }
@@ -454,6 +456,7 @@ final class DefaultsKeySnapshotTests: XCTestCase {
         XCTAssertEqual(prefs.appInsertionRules, [])
         XCTAssertEqual(prefs.appContextProfiles, [])
         XCTAssertEqual(prefs.didSeedAppContextPresets, false)
+        XCTAssertEqual(prefs.didSeedTerminalInsertionRules, false)
         XCTAssertEqual(prefs.autoCopyToClipboard, true)
         XCTAssertEqual(prefs.autoPasteTranscription, true)
         XCTAssertEqual(prefs.clipboardRestoreDelayMs, 500)

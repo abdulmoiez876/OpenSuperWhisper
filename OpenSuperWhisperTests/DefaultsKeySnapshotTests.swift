@@ -45,6 +45,7 @@ final class DefaultsKeySnapshotTests: XCTestCase {
         "cachedRemoteModels",
         "clipboardRestoreDelayMs",
         "contextAwareModelMode",
+        "crashReportMode",
         "customDictionaryBoostEnabled",
         "customDictionaryData",
         "customDictionaryEnabled",
@@ -282,6 +283,7 @@ final class DefaultsKeySnapshotTests: XCTestCase {
         }
         assertWrites("didSeedAppContextPresets") { prefs.didSeedAppContextPresets = true }
         assertWrites("didSeedTerminalInsertionRules") { prefs.didSeedTerminalInsertionRules = true }
+        assertWrites("crashReportMode") { prefs.crashReportMode = .auto }
         assertWrites("autoCopyToClipboard") { prefs.autoCopyToClipboard = false }
         assertWrites("autoPasteTranscription") { prefs.autoPasteTranscription = false }
         assertWrites("clipboardRestoreDelayMs") { prefs.clipboardRestoreDelayMs = 900 }
@@ -457,6 +459,7 @@ final class DefaultsKeySnapshotTests: XCTestCase {
         XCTAssertEqual(prefs.appContextProfiles, [])
         XCTAssertEqual(prefs.didSeedAppContextPresets, false)
         XCTAssertEqual(prefs.didSeedTerminalInsertionRules, false)
+        XCTAssertEqual(prefs.crashReportMode, .ask)
         XCTAssertEqual(prefs.autoCopyToClipboard, true)
         XCTAssertEqual(prefs.autoPasteTranscription, true)
         XCTAssertEqual(prefs.clipboardRestoreDelayMs, 500)

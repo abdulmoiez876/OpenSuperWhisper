@@ -36,6 +36,7 @@ enum SettingsArchive {
         "agentDisabledProjects",
         "agentRecentProjects",
         "cachedRemoteModels",
+        "crashReportMode",
         "debugMode",
         "dictionarySuggestionsData",
         "didSeedAppContextPresets",

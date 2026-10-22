@@ -15,11 +15,14 @@ struct ReportCard: View {
     @Environment(\.textScaleFactor) private var textScale
 
     private enum Status { case editing, saving, saved, failed }
+    private enum SendStatus { case idle, sending, sent, failed }
 
     @State private var draft: ReportDraft
     @State private var status: Status
     /// The words last added, so the button reads "Added" until either field changes.
     @State private var added: (wrong: String, right: String)?
+    /// The one-tap text copy to the developer, offered after the local save.
+    @State private var sendStatus: SendStatus = .idle
 
     private static let editorBaseHeight: CGFloat = 76
     private static let editorMaxHeight: CGFloat = 110
@@ -83,6 +86,21 @@ struct ReportCard: View {
                 status = .saved
             } catch {
                 status = .failed
+            }
+        }
+    }
+
+    /// Sends the text of the report, never the audio, to the developer. Offered once the local save
+    /// is done, so the full report with its audio is already kept whatever the network does.
+    private func sendToDeveloper() {
+        sendStatus = .sending
+        Task {
+            do {
+                try await DictationReportSender.send(recording: recording,
+                                                     problem: draft.problem, comment: draft.comment)
+                sendStatus = .sent
+            } catch {
+                sendStatus = .failed
             }
         }
     }
@@ -264,7 +282,7 @@ struct ReportCard: View {
                     Text("Report saved")
                         .scaledFont(size: 18, weight: .bold)
                         .foregroundColor(STheme.textBright)
-                    Text("It stays on this Mac. From Reports, export it as a zip or open a GitHub issue with the texts.")
+                    Text("It stays on this Mac with the audio. You can send the text to the developer below, or export the whole report as a zip from Reports.")
                         .scaledFont(size: 13)
                         .foregroundColor(STheme.hint)
                         .fixedSize(horizontal: false, vertical: true)
@@ -274,6 +292,7 @@ struct ReportCard: View {
             }
             .padding(.horizontal, 26).padding(.vertical, 28)
             HStack(spacing: 10) {
+                sendButton
                 Spacer(minLength: 0)
                 Button("Show reports") { navigation.openReports() }
                     .buttonStyle(.sSecondary)
@@ -285,6 +304,28 @@ struct ReportCard: View {
             .overlay(alignment: .top) { Rectangle().fill(STheme.border).frame(height: 1) }
         }
         .fixedSize(horizontal: false, vertical: true)
+    }
+
+    /// Text only: the settings and both transcripts, never the audio. Offered after the save, so
+    /// the full local report is already safe whatever the network does.
+    @ViewBuilder private var sendButton: some View {
+        switch sendStatus {
+        case .idle:
+            Button("Send text to developer", action: sendToDeveloper)
+                .buttonStyle(.sSecondary)
+        case .sending:
+            Button("Sending…") {}
+                .buttonStyle(.sSecondary)
+                .disabled(true)
+        case .sent:
+            Label("Text sent", systemImage: "checkmark")
+                .scaledFont(size: 13, weight: .semibold)
+                .foregroundColor(STheme.ok)
+        case .failed:
+            Button("Couldn't send — retry", action: sendToDeveloper)
+                .buttonStyle(.sSecondary)
+                .foregroundColor(STheme.warn)
+        }
     }
 }
 

@@ -1033,6 +1033,12 @@ class SettingsViewModel: ObservableObject {
         }
     }
 
+    @Published var crashReportMode: CrashReportMode {
+        didSet {
+            AppPreferences.shared.crashReportMode = crashReportMode
+        }
+    }
+
     init() {
         let prefs = AppPreferences.shared
         self.selectedEngine = prefs.selectedEngine
@@ -1132,6 +1138,7 @@ class SettingsViewModel: ObservableObject {
         self.retentionMaxAgeValue = prefs.retentionMaxAgeValue
         self.retentionMaxAgeUnit = RetentionUnit(rawValue: prefs.retentionMaxAgeUnit) ?? .days
         self.saveTranscriptionHistory = prefs.saveTranscriptionHistory
+        self.crashReportMode = prefs.crashReportMode
 
         if let savedPath = prefs.selectedWhisperModelPath ?? prefs.selectedModelPath {
             self.selectedModelURL = URL(fileURLWithPath: savedPath)

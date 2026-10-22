@@ -21,6 +21,12 @@ final class CrashReportModeTests: XCTestCase {
         XCTAssertEqual(CrashReportMode.resolve(nil), .ask)
         XCTAssertEqual(CrashReportMode.resolve("something-newer"), .ask)
     }
+
+    func testTheModeDecidesWhatHappensToABatch() {
+        XCTAssertEqual(CrashReporter.action(for: .off), .discard)
+        XCTAssertEqual(CrashReporter.action(for: .auto), .send)
+        XCTAssertEqual(CrashReporter.action(for: .ask), .ask)
+    }
 }
 
 final class CrashReportTests: XCTestCase {

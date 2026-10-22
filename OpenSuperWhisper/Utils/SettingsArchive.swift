@@ -39,6 +39,7 @@ enum SettingsArchive {
         "debugMode",
         "dictionarySuggestionsData",
         "didSeedAppContextPresets",
+        "didSeedTerminalInsertionRules",
         "feedbackPromptDone",
         "feedbackPromptLaunches",
         "groqModel",

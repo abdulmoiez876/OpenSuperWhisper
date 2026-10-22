@@ -47,7 +47,8 @@ final class AppPreferencesMigrationTests: XCTestCase {
         prefs.runMigrations()
 
         XCTAssertEqual(scratch.writtenKeys,
-                       ["appContextProfilesData", "didSeedAppContextPresets", "indicatorLayout", "recordingTriggers"])
+                       ["appContextProfilesData", "appInsertionRulesData", "didSeedAppContextPresets",
+                        "didSeedTerminalInsertionRules", "indicatorLayout", "recordingTriggers"])
         XCTAssertEqual(prefs.selectedEngine, "whisper")
         XCTAssertNil(defaults.object(forKey: "aiBackend"))
     }
@@ -374,5 +375,55 @@ final class AppPreferencesMigrationTests: XCTestCase {
 
         XCTAssertEqual(prefs.appContextProfiles, [own])
         XCTAssertTrue(prefs.didSeedAppContextPresets)
+    }
+
+    // MARK: - Terminal insertion rules (#85)
+
+    func testTerminalRulesAreSeededOnceAsPaste() {
+        prefs.runMigrations()
+
+        XCTAssertEqual(prefs.appInsertionRules.map(\.bundleIdentifier),
+                       ["com.apple.Terminal", "com.googlecode.iterm2", "com.mitchellh.ghostty",
+                        "dev.warp.Warp-Stable", "org.alacritty", "net.kovidgoyal.kitty",
+                        "com.github.wez.wezterm"])
+        XCTAssertTrue(prefs.appInsertionRules.allSatisfy { $0.mode == .paste })
+        XCTAssertTrue(prefs.didSeedTerminalInsertionRules)
+
+        prefs.appInsertionRules = []
+        prefs.runMigrations()
+
+        XCTAssertEqual(prefs.appInsertionRules, [], "a deleted terminal rule stays deleted")
+    }
+
+    /// A terminal the user has already decided about keeps their rule — here Terminal set to type
+    /// at a pace of its own — and the terminals they never touched are still added to paste.
+    func testSeedingKeepsAnExistingTerminalRuleAndAddsTheRest() {
+        let own = AppInsertionRule(bundleIdentifier: "com.apple.Terminal", appName: "Terminal",
+                                   mode: .type, typingPaceMilliseconds: 12)
+        prefs.appInsertionRules = [own]
+
+        prefs.runMigrations()
+
+        XCTAssertEqual(prefs.appInsertionRules.first, own)
+        XCTAssertEqual(prefs.appInsertionRules.count, 7)
+        XCTAssertFalse(prefs.appInsertionRules.contains {
+            $0.bundleIdentifier == "com.apple.Terminal" && $0.mode == .paste
+        })
+        XCTAssertTrue(prefs.appInsertionRules.contains {
+            $0.bundleIdentifier == "com.mitchellh.ghostty" && $0.mode == .paste
+        })
+    }
+
+    /// The user's rule blocks the seed even when they typed the identifier in another case, the
+    /// mismatch the per-app matcher is built to tolerate.
+    func testSeedingDeduplicatesCaseInsensitively() {
+        prefs.appInsertionRules = [AppInsertionRule(bundleIdentifier: "COM.APPLE.TERMINAL",
+                                                    appName: "Terminal", mode: .type)]
+
+        prefs.runMigrations()
+
+        XCTAssertEqual(prefs.appInsertionRules.filter {
+            $0.bundleIdentifier.lowercased() == "com.apple.terminal"
+        }.count, 1)
     }
 }

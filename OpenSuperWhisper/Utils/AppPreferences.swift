@@ -16,6 +16,7 @@ final class AppPreferences {
     func runMigrations() {
         migrateOldPreferences()
         seedAppContextPresetsIfNeeded()
+        seedTerminalInsertionRulesIfNeeded()
         migrateGroqToRemote()
         migrateAIProviderToBackend()
         migrateEndChime()
@@ -827,6 +828,29 @@ final class AppPreferences {
             appContextProfiles = AppContextProfile.defaultPresets
         }
         didSeedAppContextPresets = true
+    }
+
+    /// Flips true once the terminal paste rules have been seeded, so a user who deletes them keeps
+    /// them deleted (we never re-seed). See `seedTerminalInsertionRulesIfNeeded`.
+    @UserDefault(key: "didSeedTerminalInsertionRules", defaultValue: false)
+    var didSeedTerminalInsertionRules: Bool
+
+    /// One-time seed of the bundled terminal paste rules (#85). Typing loses or misplaces text in
+    /// an app that redraws per keystroke, which terminals do; pasting is immune. The per-app list
+    /// already carried the fix, but only for someone who found the setting, so a fresh install
+    /// still typed into terminals and hit the bug. Adds only the terminals the list does not
+    /// already mention, so an existing rule — for one of them or for any other app — is never
+    /// touched, and runs once, so a rule the user later deletes stays deleted.
+    private func seedTerminalInsertionRulesIfNeeded() {
+        guard !didSeedTerminalInsertionRules else { return }
+        let known = Set(appInsertionRules.map { $0.bundleIdentifier.lowercased() })
+        let additions = AppInsertionRule.bundledTerminalPresets.filter {
+            !known.contains($0.bundleIdentifier.lowercased())
+        }
+        if !additions.isEmpty {
+            appInsertionRules += additions
+        }
+        didSeedTerminalInsertionRules = true
     }
 
     // Clipboard settings

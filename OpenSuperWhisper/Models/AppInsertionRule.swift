@@ -76,4 +76,32 @@ extension AppInsertionRule {
                 && $0.bundleIdentifier.compare(bundleID, options: .caseInsensitive) == .orderedSame
         }
     }
+
+    /// Terminals seeded to paste on first launch (#85).
+    ///
+    /// A terminal redraws its whole input area on every keystroke, so typing — one event per
+    /// twenty characters — loses or misplaces part of a dictation. Pasting is one event and is
+    /// immune. The per-app list already carried the fix, but only for someone who found the
+    /// setting and named their terminal; seeding the common ones makes a fresh install safe
+    /// without that. Each is an ordinary rule the person can switch back to typing or delete, and
+    /// the seed runs once, so a deletion sticks.
+    ///
+    /// Stable, standalone terminals only, by their release bundle identifiers. The integrated
+    /// terminal of an editor (VS Code and the like) is deliberately absent: the editor is the
+    /// frontmost app, and forcing its whole surface to paste would be wrong far more often than
+    /// right. Someone on a terminal not listed here, or on a beta channel with another identifier,
+    /// adds it themselves.
+    static let bundledTerminalPresets: [AppInsertionRule] = [
+        pasteRule("com.apple.Terminal", "Terminal"),
+        pasteRule("com.googlecode.iterm2", "iTerm2"),
+        pasteRule("com.mitchellh.ghostty", "Ghostty"),
+        pasteRule("dev.warp.Warp-Stable", "Warp"),
+        pasteRule("org.alacritty", "Alacritty"),
+        pasteRule("net.kovidgoyal.kitty", "kitty"),
+        pasteRule("com.github.wez.wezterm", "WezTerm"),
+    ]
+
+    private static func pasteRule(_ bundleIdentifier: String, _ appName: String) -> AppInsertionRule {
+        AppInsertionRule(bundleIdentifier: bundleIdentifier, appName: appName, mode: .paste)
+    }
 }

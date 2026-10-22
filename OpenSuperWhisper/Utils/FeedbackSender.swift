@@ -1,8 +1,9 @@
 import Foundation
 
-/// What a message from the Feedback card is about.
+/// What a message to the feedback endpoint is about. `bug` and `idea` come from the Feedback card;
+/// `crash` comes from the crash reporter, never the card, which offers only the first two.
 enum FeedbackKind: String, CaseIterable {
-    case bug, idea
+    case bug, idea, crash
 }
 
 /// One message from the Feedback card, as the user left it.

@@ -25,6 +25,8 @@ struct PrivacyRubric: View {
               keywords: "screen read field caret case period space écran lire champ curseur majuscule point espace"),
         .init(title: "Suggest words from your corrections", rubric: .privacy,
               keywords: "dictionary learn correction field read suggestion dictionnaire apprendre corriger champ lire"),
+        .init(title: "Send crash reports", rubric: .privacy,
+              keywords: "crash report diagnostics stack send telemetry rapport plantage diagnostic envoyer"),
     ]
 
     var body: some View {
@@ -32,6 +34,29 @@ struct PrivacyRubric: View {
             historyGroup
             retentionGroup
             contextGroup
+            diagnosticsGroup
+        }
+    }
+
+    /// A crash report leaves this Mac, so the choice is the person's. What it never carries is
+    /// spelled out next to the setting, not buried in a policy.
+    private var diagnosticsGroup: some View {
+        SettingsGroup("Diagnostics") {
+            SettingRow("Send crash reports", hint: crashReportHint) {
+                SPicker(selection: $viewModel.crashReportMode,
+                        options: CrashReportMode.allCases.map { ($0, LocalizedStringKey($0.title)) })
+            }
+        }
+    }
+
+    private var crashReportHint: LocalizedStringKey {
+        switch viewModel.crashReportMode {
+        case .ask:
+            return "After a crash, OpenSuperWhisper asks before sending. A report says where the app stopped, its version and your macOS version. It never includes your dictations, your audio or your clipboard."
+        case .auto:
+            return "After a crash, a report is sent without asking. It says where the app stopped, its version and your macOS version, and never your dictations, your audio or your clipboard."
+        case .off:
+            return "Crashes are never reported."
         }
     }
 

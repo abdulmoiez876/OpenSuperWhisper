@@ -452,6 +452,19 @@ final class AppPreferences {
     @UserDefault(key: "feedbackPromptLaunches", defaultValue: 0)
     var feedbackPromptLaunches: Int
 
+    /// Raw store for `crashReportMode`. A plain string so an unknown value from a newer build reads
+    /// as the default rather than failing to decode.
+    @UserDefault(key: "crashReportMode", defaultValue: CrashReportMode.default.rawValue)
+    private var crashReportModeRaw: String
+
+    /// What to do with a crash or hang report MetricKit hands over on the next launch. Local to this
+    /// Mac on purpose: consent to send a stack trace is not something a settings import should carry
+    /// to a machine that never agreed to it, so a fresh install asks on its first crash.
+    var crashReportMode: CrashReportMode {
+        get { CrashReportMode.resolve(crashReportModeRaw) }
+        set { crashReportModeRaw = newValue.rawValue }
+    }
+
     @UserDefault(key: "useAsianAutocorrect", defaultValue: true)
     var useAsianAutocorrect: Bool
     

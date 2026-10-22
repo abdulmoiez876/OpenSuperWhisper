@@ -175,6 +175,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, ObservableOb
         }
         MainActor.assumeIsolated {
             FeedbackPromptScheduler.shared.recordLaunch(onboarded: onboarded, startedHidden: startsHidden)
+            CrashReporter.shared.start()
         }
 
         NotificationCenter.default.addObserver(
